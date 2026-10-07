@@ -1,0 +1,3068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Emergency Vehicle Route Planner</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+
+        /* ================= HEADER ================= */
+
+        header {
+            height: 70px;
+            background: #0f172a;
+            color: white;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            padding: 0 25px;
+        }
+
+        header h1 {
+            font-size: 23px;
+        }
+
+        .status {
+            padding: 8px 15px;
+            border-radius: 20px;
+            background: #16a34a;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        /* ================= LAYOUT ================= */
+
+        .container {
+            max-width: 1600px;
+            margin: auto;
+
+            display: grid;
+            grid-template-columns: 280px 1fr 300px;
+
+            gap: 15px;
+            padding: 15px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 14px;
+            padding: 16px;
+
+            box-shadow: 0 4px 15px rgba(0,0,0,0.07);
+        }
+
+        .panel h2 {
+            font-size: 17px;
+            margin-bottom: 14px;
+        }
+
+        /* ================= SELECT ================= */
+
+        select {
+            width: 100%;
+            padding: 9px;
+
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+
+            background: white;
+            margin-bottom: 10px;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 10px 0 5px;
+        }
+
+        /* ================= BUTTONS ================= */
+
+        button {
+            width: 100%;
+
+            padding: 10px;
+
+            border: none;
+            border-radius: 7px;
+
+            margin-top: 7px;
+
+            cursor: pointer;
+
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        button:hover {
+            opacity: 0.85;
+        }
+
+        .btn-red {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn-blue {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-orange {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-green {
+            background: #16a34a;
+            color: white;
+        }
+
+        .btn-gray {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        .btn-purple {
+            background: #7c3aed;
+            color: white;
+        }
+
+        /* ================= MODE ================= */
+
+        .mode-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin-bottom: 12px;
+        }
+
+        .mode-buttons button {
+            margin: 0;
+            padding: 9px 4px;
+        }
+
+        .mode-active {
+            outline: 3px solid #93c5fd;
+        }
+
+        /* ================= MAP ================= */
+
+        .map-container {
+            position: relative;
+
+            height: 680px;
+
+            background:
+                linear-gradient(
+                    rgba(226,232,240,0.65) 1px,
+                    transparent 1px
+                ),
+                linear-gradient(
+                    90deg,
+                    rgba(226,232,240,0.65) 1px,
+                    transparent 1px
+                );
+
+            background-size: 40px 40px;
+
+            border: 2px solid #cbd5e1;
+
+            border-radius: 14px;
+
+            overflow: hidden;
+        }
+
+        .map-title {
+            position: absolute;
+
+            top: 12px;
+            left: 15px;
+
+            z-index: 10;
+
+            background: white;
+
+            padding: 8px 12px;
+
+            border-radius: 8px;
+
+            box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ================= ROADS ================= */
+
+        .road {
+            stroke: #94a3b8;
+            stroke-width: 7;
+
+            stroke-linecap: round;
+        }
+
+        .road.active {
+            stroke: #f59e0b;
+            stroke-width: 10;
+        }
+
+        .road.final {
+            stroke: #16a34a;
+            stroke-width: 11;
+        }
+
+        /* ================= ROAD WEIGHTS ================= */
+
+        .weight {
+            fill: white;
+            stroke: #94a3b8;
+            stroke-width: 1;
+        }
+
+        .weight-text {
+            font-size: 13px;
+            font-weight: bold;
+            fill: #0f172a;
+            text-anchor: middle;
+        }
+
+        /* ================= NODES ================= */
+
+        .node {
+            stroke: white;
+            stroke-width: 4;
+
+            cursor: pointer;
+        }
+
+        .node-normal {
+            fill: #3b82f6;
+        }
+
+        .node-visited {
+            fill: #64748b;
+        }
+
+        .node-current {
+            fill: #f59e0b;
+        }
+
+        .node-start {
+            fill: #dc2626;
+        }
+
+        .node-end {
+            fill: #16a34a;
+        }
+
+        .node-label {
+            font-size: 13px;
+            font-weight: bold;
+            fill: #0f172a;
+
+            text-anchor: middle;
+        }
+
+        /* ================= RIGHT TABLE ================= */
+
+        .distance-table {
+            width: 100%;
+            border-collapse: collapse;
+
+            font-size: 12px;
+        }
+
+        .distance-table th,
+        .distance-table td {
+            padding: 8px 4px;
+
+            border-bottom: 1px solid #e2e8f0;
+
+            text-align: left;
+        }
+
+        .distance-table th {
+            color: #64748b;
+        }
+
+        .current-row {
+            background: #fef3c7;
+        }
+
+        .visited-row {
+            background: #f1f5f9;
+        }
+
+        /* ================= ROUTE ================= */
+
+        .route-box {
+            margin-top: 15px;
+
+            padding: 13px;
+
+            background: #ecfdf5;
+
+            border: 1px solid #86efac;
+
+            border-radius: 9px;
+        }
+
+        .route-box h3 {
+            color: #166534;
+
+            margin-bottom: 7px;
+
+            font-size: 15px;
+        }
+
+        .route {
+            color: #15803d;
+
+            font-weight: bold;
+
+            line-height: 1.6;
+
+            word-break: break-word;
+        }
+
+        /* ================= LOG ================= */
+
+        .log {
+            margin-top: 14px;
+
+            height: 165px;
+
+            overflow-y: auto;
+
+            background: #0f172a;
+
+            color: #cbd5e1;
+
+            border-radius: 8px;
+
+            padding: 9px;
+
+            font-size: 11px;
+
+            line-height: 1.7;
+        }
+
+        /* ================= INFORMATION ================= */
+
+        .info {
+            background: #eff6ff;
+
+            border-left: 4px solid #2563eb;
+
+            border-radius: 7px;
+
+            padding: 10px;
+
+            margin-top: 12px;
+
+            font-size: 12px;
+
+            line-height: 1.5;
+        }
+
+        .warning {
+            background: #fff7ed;
+
+            border-left: 4px solid #f97316;
+
+            border-radius: 7px;
+
+            padding: 9px;
+
+            margin-top: 10px;
+
+            font-size: 11px;
+
+            line-height: 1.5;
+        }
+
+        /* ================= LEGEND ================= */
+
+        .legend {
+            display: grid;
+
+            grid-template-columns: 1fr 1fr;
+
+            gap: 7px;
+
+            margin-top: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+
+            align-items: center;
+
+            gap: 6px;
+
+            font-size: 11px;
+        }
+
+        .dot {
+            width: 13px;
+            height: 13px;
+
+            border-radius: 50%;
+        }
+
+        .dot-red {
+            background: #dc2626;
+        }
+
+        .dot-green {
+            background: #16a34a;
+        }
+
+        .dot-orange {
+            background: #f59e0b;
+        }
+
+        .dot-gray {
+            background: #64748b;
+        }
+
+        /* ================= CUSTOM MAP PANEL ================= */
+
+        #customTools {
+            display: none;
+        }
+
+        .tool-info {
+            margin-top: 8px;
+
+            padding: 8px;
+
+            background: #f8fafc;
+
+            border-radius: 7px;
+
+            font-size: 11px;
+
+            line-height: 1.5;
+        }
+
+        .custom-count {
+            margin-top: 8px;
+
+            font-size: 11px;
+
+            color: #475569;
+        }
+
+        /* ================= RESPONSIVE ================= */
+
+        @media(max-width:1100px) {
+
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .map-container {
+                height: 600px;
+            }
+
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+
+    <h1>🚑 Emergency Vehicle Route Planner</h1>
+
+    <div
+        class="status"
+        id="status"
+    >
+        Ready
+    </div>
+
+</header>
+
+
+<div class="container">
+
+
+    <!-- ===================================================== -->
+    <!-- LEFT CONTROL PANEL -->
+    <!-- ===================================================== -->
+
+    <div class="panel">
+
+        <h2>🛠 Map & Route Control</h2>
+
+
+        <!-- MAP MODE -->
+
+        <div class="mode-buttons">
+
+            <button
+                id="demoModeBtn"
+                class="btn-blue mode-active"
+                onclick="useDemoMap()"
+            >
+                Demo Map
+            </button>
+
+            <button
+                id="customModeBtn"
+                class="btn-purple"
+                onclick="useCustomMap()"
+            >
+                Custom Map
+            </button>
+
+        </div>
+
+
+        <!-- ================= DEMO CONTROLS ================= -->
+
+        <div id="demoTools">
+
+            <label>
+                Emergency Vehicle
+            </label>
+
+            <select id="startSelect">
+
+                <option value="A">
+                    A - Ambulance Station
+                </option>
+
+                <option value="B">
+                    B - Junction
+                </option>
+
+                <option value="C">
+                    C - Residential Area
+                </option>
+
+                <option value="D">
+                    D - Main Road
+                </option>
+
+                <option value="E">
+                    E - City Center
+                </option>
+
+                <option value="F">
+                    F - Hospital
+                </option>
+
+            </select>
+
+
+            <label>
+                Hospital / Destination
+            </label>
+
+            <select id="endSelect">
+
+                <option value="F">
+                    F - Hospital
+                </option>
+
+                <option value="E">
+                    E - City Center
+                </option>
+
+                <option value="D">
+                    D - Main Road
+                </option>
+
+                <option value="C">
+                    C - Residential Area
+                </option>
+
+                <option value="B">
+                    B - Junction
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <!-- ================= CUSTOM TOOLS ================= -->
+
+        <div id="customTools">
+
+            <button
+                class="btn-blue"
+                onclick="setTool('add')"
+            >
+                ＋ Add Node
+            </button>
+
+            <button
+                class="btn-red"
+                onclick="setTool('start')"
+            >
+                🚑 Set Start
+            </button>
+
+            <button
+                class="btn-green"
+                onclick="setTool('end')"
+            >
+                🏥 Set Hospital
+            </button>
+
+            <button
+                class="btn-orange"
+                onclick="setTool('connect')"
+            >
+                🔗 Connect Roads
+            </button>
+
+            <button
+                class="btn-gray"
+                onclick="setTool('none')"
+            >
+                🖱 Normal Mode
+            </button>
+
+
+            <div class="tool-info">
+
+                <strong>How to build your map:</strong>
+
+                <br><br>
+
+                <b>1.</b> Click "Add Node", then click on the map.
+
+                <br>
+
+                <b>2.</b> Click "Set Start", then click a node.
+
+                <br>
+
+                <b>3.</b> Click "Set Hospital", then click a node.
+
+                <br>
+
+                <b>4.</b> Click "Connect Roads", then click two nodes.
+
+                <br>
+
+                <b>5.</b> Enter the travel time.
+
+            </div>
+
+
+            <div
+                class="custom-count"
+                id="customCount"
+            >
+                Nodes: 0 | Roads: 0
+            </div>
+
+
+            <button
+                class="btn-gray"
+                onclick="clearCustomMap()"
+            >
+                🗑 Clear Custom Map
+            </button>
+
+        </div>
+
+
+        <!-- ================= ALGORITHM CONTROLS ================= -->
+
+        <hr
+            style="
+            margin:15px 0;
+            border:0;
+            border-top:1px solid #e2e8f0;
+            "
+        >
+
+
+        <button
+            class="btn-red"
+            onclick="startAlgorithm()"
+        >
+            🚑 Start Route Planning
+        </button>
+
+
+        <button
+            class="btn-blue"
+            onclick="nextStep()"
+        >
+            ▶ Next Algorithm Step
+        </button>
+
+
+        <button
+            class="btn-orange"
+            onclick="playAlgorithm()"
+        >
+            ▶▶ Play Animation
+        </button>
+
+
+        <button
+            class="btn-gray"
+            onclick="resetAlgorithm()"
+        >
+            ↻ Reset Algorithm
+        </button>
+
+
+        <div class="info">
+
+            <strong>Dijkstra Algorithm</strong>
+
+            <br><br>
+
+            The algorithm repeatedly selects the unvisited node with the smallest known travel time and checks whether travelling through that node provides a faster route to its neighbours.
+
+        </div>
+
+
+        <div class="legend">
+
+            <div class="legend-item">
+
+                <span class="dot dot-red"></span>
+
+                Start
+
+            </div>
+
+            <div class="legend-item">
+
+                <span class="dot dot-green"></span>
+
+                Hospital
+
+            </div>
+
+            <div class="legend-item">
+
+                <span class="dot dot-orange"></span>
+
+                Current
+
+            </div>
+
+            <div class="legend-item">
+
+                <span class="dot dot-gray"></span>
+
+                Visited
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- MAP -->
+    <!-- ===================================================== -->
+
+    <div class="panel">
+
+        <div class="map-container">
+
+            <div
+                class="map-title"
+                id="mapTitle"
+            >
+                🗺️ Demo City Road Network
+            </div>
+
+
+            <svg
+                id="mapSvg"
+                viewBox="0 0 800 600"
+            >
+
+                <!-- DEMO MAP IS CREATED BY JAVASCRIPT -->
+
+            </svg>
+
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- RIGHT STATUS PANEL -->
+    <!-- ===================================================== -->
+
+    <div class="panel">
+
+        <h2>📊 Algorithm Status</h2>
+
+
+        <table class="distance-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>
+                        Node
+                    </th>
+
+                    <th>
+                        Distance
+                    </th>
+
+                    <th>
+                        Status
+                    </th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody
+                id="distanceTable"
+            >
+
+            </tbody>
+
+        </table>
+
+
+        <div class="route-box">
+
+            <h3>
+                🚑 Shortest Route
+            </h3>
+
+
+            <div
+                class="route"
+                id="finalRoute"
+            >
+                Waiting...
+            </div>
+
+
+            <br>
+
+
+            <strong>
+                Total Travel Time:
+                <span id="totalDistance">
+                    --
+                </span>
+            </strong>
+
+        </div>
+
+
+        <div
+            class="log"
+            id="log"
+        >
+            System ready...
+        </div>
+
+
+        <div class="warning">
+
+            <strong>Tip:</strong>
+
+            In Custom Map mode, use the road travel time as the edge weight. For example, if an ambulance takes 4 minutes to travel between two locations, enter <b>4</b>.
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* ============================================================
+   EMERGENCY VEHICLE ROUTE PLANNER
+   ============================================================ */
+
+
+/* ============================================================
+   DEMO GRAPH
+   ============================================================ */
+
+const demoGraph = {
+
+    A: {
+        B: 4,
+        C: 2
+    },
+
+    B: {
+        A: 4,
+        C: 5,
+        D: 3
+    },
+
+    C: {
+        A: 2,
+        B: 5,
+        D: 1,
+        E: 6
+    },
+
+    D: {
+        B: 3,
+        C: 1,
+        E: 2,
+        F: 4
+    },
+
+    E: {
+        C: 6,
+        D: 2,
+        F: 3
+    },
+
+    F: {
+        D: 4,
+        E: 3
+    }
+
+};
+
+
+/* ============================================================
+   DEMO NODE POSITIONS
+   ============================================================ */
+
+const demoPositions = {
+
+    A: {
+        x: 120,
+        y: 140
+    },
+
+    B: {
+        x: 350,
+        y: 100
+    },
+
+    C: {
+        x: 170,
+        y: 390
+    },
+
+    D: {
+        x: 550,
+        y: 220
+    },
+
+    E: {
+        x: 410,
+        y: 500
+    },
+
+    F: {
+        x: 700,
+        y: 390
+    }
+
+};
+
+
+/* ============================================================
+   APPLICATION VARIABLES
+   ============================================================ */
+
+let mapMode = "demo";
+
+let customNodes = {};
+
+let customGraph = {};
+
+let nodeCounter = 0;
+
+let currentTool = "none";
+
+let selectedNodeForConnection = null;
+
+let startNode = "A";
+
+let endNode = "F";
+
+
+/* ============================================================
+   DIJKSTRA VARIABLES
+   ============================================================ */
+
+let graph = {};
+
+let positions = {};
+
+let nodes = [];
+
+let distance = {};
+
+let previous = {};
+
+let visited = new Set();
+
+let currentNode = null;
+
+let algorithmStarted = false;
+
+let algorithmFinished = false;
+
+let timer = null;
+
+
+/* ============================================================
+   SVG HELPERS
+   ============================================================ */
+
+const svg =
+    document.getElementById("mapSvg");
+
+
+const NS =
+    "http://www.w3.org/2000/svg";
+
+
+function createSVGElement(type) {
+
+    return document.createElementNS(
+        NS,
+        type
+    );
+
+}
+
+
+/* ============================================================
+   USE DEMO MAP
+   ============================================================ */
+
+function useDemoMap() {
+
+    mapMode = "demo";
+
+    document.getElementById(
+        "demoTools"
+    ).style.display = "block";
+
+
+    document.getElementById(
+        "customTools"
+    ).style.display = "none";
+
+
+    document.getElementById(
+        "demoModeBtn"
+    ).classList.add(
+        "mode-active"
+    );
+
+
+    document.getElementById(
+        "customModeBtn"
+    ).classList.remove(
+        "mode-active"
+    );
+
+
+    document.getElementById(
+        "mapTitle"
+    ).innerText =
+        "🗺️ Demo City Road Network";
+
+
+    startNode =
+        document.getElementById(
+            "startSelect"
+        ).value;
+
+
+    endNode =
+        document.getElementById(
+            "endSelect"
+        ).value;
+
+
+    resetAlgorithm();
+
+
+    drawDemoMap();
+
+}
+
+
+/* ============================================================
+   USE CUSTOM MAP
+   ============================================================ */
+
+function useCustomMap() {
+
+    mapMode = "custom";
+
+    document.getElementById(
+        "demoTools"
+    ).style.display = "none";
+
+
+    document.getElementById(
+        "customTools"
+    ).style.display = "block";
+
+
+    document.getElementById(
+        "demoModeBtn"
+    ).classList.remove(
+        "mode-active"
+    );
+
+
+    document.getElementById(
+        "customModeBtn"
+    ).classList.add(
+        "mode-active"
+    );
+
+
+    document.getElementById(
+        "mapTitle"
+    ).innerText =
+        "🛠️ Custom Emergency Map";
+
+
+    resetAlgorithm();
+
+    drawCustomMap();
+
+}
+
+
+/* ============================================================
+   DRAW DEMO MAP
+   ============================================================ */
+
+function drawDemoMap() {
+
+    svg.innerHTML = "";
+
+
+    positions =
+        JSON.parse(
+            JSON.stringify(
+                demoPositions
+            )
+        );
+
+
+    graph =
+        JSON.parse(
+            JSON.stringify(
+                demoGraph
+            )
+        );
+
+
+    nodes =
+        Object.keys(graph);
+
+
+    drawRoads();
+
+    drawNodes();
+
+    updateTable();
+
+}
+
+
+/* ============================================================
+   DRAW CUSTOM MAP
+   ============================================================ */
+
+function drawCustomMap() {
+
+    svg.innerHTML = "";
+
+
+    positions = {};
+
+
+    graph = {};
+
+
+    nodes =
+        Object.keys(
+            customNodes
+        );
+
+
+    nodes.forEach(node => {
+
+        positions[node] =
+            customNodes[node];
+
+        graph[node] =
+            customGraph[node] || {};
+
+    });
+
+
+    drawRoads();
+
+    drawNodes();
+
+    updateCustomCount();
+
+    updateTable();
+
+}
+
+
+/* ============================================================
+   DRAW ROADS
+   ============================================================ */
+
+function drawRoads() {
+
+    const drawn =
+        new Set();
+
+
+    nodes.forEach(a => {
+
+        if (!graph[a]) {
+            return;
+        }
+
+
+        Object.keys(
+            graph[a]
+        ).forEach(b => {
+
+            const roadKey =
+                [a, b]
+                .sort()
+                .join("-");
+
+
+            if (
+                drawn.has(
+                    roadKey
+                )
+            ) {
+
+                return;
+
+            }
+
+
+            drawn.add(
+                roadKey
+            );
+
+
+            if (
+                !positions[a] ||
+                !positions[b]
+            ) {
+
+                return;
+
+            }
+
+
+            const line =
+                createSVGElement(
+                    "line"
+                );
+
+
+            line.setAttribute(
+                "id",
+                "road-" +
+                [a, b]
+                .sort()
+                .join("")
+            );
+
+
+            line.classList.add(
+                "road"
+            );
+
+
+            line.setAttribute(
+                "x1",
+                positions[a].x
+            );
+
+
+            line.setAttribute(
+                "y1",
+                positions[a].y
+            );
+
+
+            line.setAttribute(
+                "x2",
+                positions[b].x
+            );
+
+
+            line.setAttribute(
+                "y2",
+                positions[b].y
+            );
+
+
+            svg.appendChild(
+                line
+            );
+
+
+            /* WEIGHT */
+
+            const midX =
+                (
+                    positions[a].x +
+                    positions[b].x
+                ) / 2;
+
+
+            const midY =
+                (
+                    positions[a].y +
+                    positions[b].y
+                ) / 2;
+
+
+            const rect =
+                createSVGElement(
+                    "rect"
+                );
+
+
+            rect.classList.add(
+                "weight"
+            );
+
+
+            rect.setAttribute(
+                "x",
+                midX - 17
+            );
+
+
+            rect.setAttribute(
+                "y",
+                midY - 13
+            );
+
+
+            rect.setAttribute(
+                "width",
+                34
+            );
+
+
+            rect.setAttribute(
+                "height",
+                25
+            );
+
+
+            rect.setAttribute(
+                "rx",
+                5
+            );
+
+
+            svg.appendChild(
+                rect
+            );
+
+
+            const text =
+                createSVGElement(
+                    "text"
+                );
+
+
+            text.classList.add(
+                "weight-text"
+            );
+
+
+            text.setAttribute(
+                "x",
+                midX
+            );
+
+
+            text.setAttribute(
+                "y",
+                midY + 5
+            );
+
+
+            text.textContent =
+                graph[a][b];
+
+
+            svg.appendChild(
+                text
+            );
+
+        });
+
+    });
+
+}
+
+
+/* ============================================================
+   DRAW NODES
+   ============================================================ */
+
+function drawNodes() {
+
+    nodes.forEach(node => {
+
+        if (!positions[node]) {
+            return;
+        }
+
+
+        const circle =
+            createSVGElement(
+                "circle"
+            );
+
+
+        circle.id =
+            "node-" + node;
+
+
+        circle.classList.add(
+            "node"
+        );
+
+
+        circle.classList.add(
+            "node-normal"
+        );
+
+
+        circle.setAttribute(
+            "cx",
+            positions[node].x
+        );
+
+
+        circle.setAttribute(
+            "cy",
+            positions[node].y
+        );
+
+
+        circle.setAttribute(
+            "r",
+            24
+        );
+
+
+        circle.addEventListener(
+            "click",
+            function(event) {
+
+                event.stopPropagation();
+
+                handleNodeClick(
+                    node
+                );
+
+            }
+        );
+
+
+        svg.appendChild(
+            circle
+        );
+
+
+        const label =
+            createSVGElement(
+                "text"
+            );
+
+
+        label.classList.add(
+            "node-label"
+        );
+
+
+        label.setAttribute(
+            "x",
+            positions[node].x
+        );
+
+
+        label.setAttribute(
+            "y",
+            positions[node].y + 5
+        );
+
+
+        label.textContent =
+            node;
+
+
+        label.style.pointerEvents =
+            "none";
+
+
+        svg.appendChild(
+            label
+        );
+
+    });
+
+
+    updateNodeColors();
+
+}
+
+
+/* ============================================================
+   CUSTOM MAP CLICK
+   ============================================================ */
+
+svg.addEventListener(
+    "click",
+    function(event) {
+
+        if (
+            mapMode !== "custom"
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            currentTool !== "add"
+        ) {
+
+            return;
+
+        }
+
+
+        const point =
+            getSVGPoint(
+                event
+            );
+
+
+        addCustomNode(
+            point.x,
+            point.y
+        );
+
+    }
+);
+
+
+/* ============================================================
+   GET SVG COORDINATES
+   ============================================================ */
+
+function getSVGPoint(event) {
+
+    const rect =
+        svg.getBoundingClientRect();
+
+
+    const viewBox =
+        svg.viewBox.baseVal;
+
+
+    const x =
+        (
+            event.clientX -
+            rect.left
+        )
+        *
+        (
+            viewBox.width /
+            rect.width
+        );
+
+
+    const y =
+        (
+            event.clientY -
+            rect.top
+        )
+        *
+        (
+            viewBox.height /
+            rect.height
+        );
+
+
+    return {
+        x: x,
+        y: y
+    };
+
+}
+
+
+/* ============================================================
+   ADD CUSTOM NODE
+   ============================================================ */
+
+function addCustomNode(x, y) {
+
+    nodeCounter++;
+
+
+    const name =
+        "N" +
+        nodeCounter;
+
+
+    customNodes[name] = {
+        x: Math.max(
+            35,
+            Math.min(
+                765,
+                x
+            )
+        ),
+
+        y: Math.max(
+            45,
+            Math.min(
+                565,
+                y
+            )
+        )
+    };
+
+
+    customGraph[name] = {};
+
+
+    logMessage(
+        `Added custom node ${name}`
+    );
+
+
+    drawCustomMap();
+
+}
+
+
+/* ============================================================
+   TOOL SELECTION
+   ============================================================ */
+
+function setTool(tool) {
+
+    currentTool = tool;
+
+    selectedNodeForConnection =
+        null;
+
+
+    if (tool === "add") {
+
+        logMessage(
+            "Add Node mode activated. Click on the map."
+        );
+
+    }
+
+
+    if (tool === "start") {
+
+        logMessage(
+            "Set Start mode activated. Click a node."
+        );
+
+    }
+
+
+    if (tool === "end") {
+
+        logMessage(
+            "Set Hospital mode activated. Click a node."
+        );
+
+    }
+
+
+    if (tool === "connect") {
+
+        logMessage(
+            "Connect mode activated. Select two nodes."
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   HANDLE NODE CLICK
+   ============================================================ */
+
+function handleNodeClick(node) {
+
+    if (
+        mapMode !== "custom"
+    ) {
+
+        return;
+
+    }
+
+
+    /* SET START */
+
+    if (
+        currentTool === "start"
+    ) {
+
+        startNode = node;
+
+        logMessage(
+            `${node} selected as emergency vehicle start`
+        );
+
+
+        updateNodeColors();
+
+        updateTable();
+
+        return;
+
+    }
+
+
+    /* SET END */
+
+    if (
+        currentTool === "end"
+    ) {
+
+        if (
+            node === startNode
+        ) {
+
+            alert(
+                "Hospital cannot be the same as the start."
+            );
+
+            return;
+
+        }
+
+
+        endNode = node;
+
+        logMessage(
+            `${node} selected as hospital`
+        );
+
+
+        updateNodeColors();
+
+        updateTable();
+
+        return;
+
+    }
+
+
+    /* CONNECT ROADS */
+
+    if (
+        currentTool === "connect"
+    ) {
+
+        if (
+            selectedNodeForConnection === null
+        ) {
+
+            selectedNodeForConnection =
+                node;
+
+
+            logMessage(
+                `Selected ${node}. Now select another node.`
+            );
+
+            return;
+
+        }
+
+
+        if (
+            selectedNodeForConnection === node
+        ) {
+
+            selectedNodeForConnection =
+                null;
+
+            return;
+
+        }
+
+
+        const first =
+            selectedNodeForConnection;
+
+
+        const second =
+            node;
+
+
+        const time =
+            prompt(
+                `Enter travel time from ${first} to ${second} (minutes):`
+            );
+
+
+        if (
+            time === null
+        ) {
+
+            selectedNodeForConnection =
+                null;
+
+            return;
+
+        }
+
+
+        const weight =
+            Number(time);
+
+
+        if (
+            !Number.isFinite(weight) ||
+            weight <= 0
+        ) {
+
+            alert(
+                "Please enter a valid positive travel time."
+            );
+
+            selectedNodeForConnection =
+                null;
+
+            return;
+
+        }
+
+
+        customGraph[first][second] =
+            weight;
+
+
+        customGraph[second][first] =
+            weight;
+
+
+        logMessage(
+            `Road added: ${first} ↔ ${second} = ${weight} minutes`
+        );
+
+
+        selectedNodeForConnection =
+            null;
+
+
+        drawCustomMap();
+
+    }
+
+}
+
+
+/* ============================================================
+   UPDATE CUSTOM COUNT
+   ============================================================ */
+
+function updateCustomCount() {
+
+    let roadCount = 0;
+
+
+    Object.keys(
+        customGraph
+    ).forEach(node => {
+
+        roadCount +=
+            Object.keys(
+                customGraph[node] || {}
+            ).length;
+
+    });
+
+
+    roadCount =
+        roadCount / 2;
+
+
+    document.getElementById(
+        "customCount"
+    ).innerText =
+        `Nodes: ${Object.keys(customNodes).length} | Roads: ${roadCount}`;
+
+}
+
+
+/* ============================================================
+   CLEAR CUSTOM MAP
+   ============================================================ */
+
+function clearCustomMap() {
+
+    if (
+        !confirm(
+            "Clear the entire custom map?"
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    customNodes = {};
+
+    customGraph = {};
+
+    nodeCounter = 0;
+
+    startNode = null;
+
+    endNode = null;
+
+
+    resetAlgorithm();
+
+    drawCustomMap();
+
+
+    logMessage(
+        "Custom map cleared."
+    );
+
+}
+
+
+/* ============================================================
+   START ALGORITHM
+   ============================================================ */
+
+function startAlgorithm() {
+
+    clearInterval(
+        timer
+    );
+
+
+    if (
+        mapMode === "demo"
+    ) {
+
+        startNode =
+            document.getElementById(
+                "startSelect"
+            ).value;
+
+
+        endNode =
+            document.getElementById(
+                "endSelect"
+            ).value;
+
+    }
+
+
+    if (
+        mapMode === "custom"
+    ) {
+
+        if (
+            Object.keys(
+                customNodes
+            ).length < 2
+        ) {
+
+            alert(
+                "Add at least two nodes."
+            );
+
+            return;
+
+        }
+
+
+        if (
+            !startNode ||
+            !endNode
+        ) {
+
+            alert(
+                "Please set both Start and Hospital."
+            );
+
+            return;
+
+        }
+
+
+        if (
+            startNode === endNode
+        ) {
+
+            alert(
+                "Start and Hospital must be different."
+            );
+
+            return;
+
+        }
+
+    }
+
+
+    if (
+        mapMode === "demo"
+    ) {
+
+        graph =
+            JSON.parse(
+                JSON.stringify(
+                    demoGraph
+                )
+            );
+
+
+        positions =
+            JSON.parse(
+                JSON.stringify(
+                    demoPositions
+                )
+            );
+
+
+        nodes =
+            Object.keys(
+                graph
+            );
+
+    }
+    else {
+
+        graph =
+            JSON.parse(
+                JSON.stringify(
+                    customGraph
+                )
+            );
+
+
+        positions = {};
+
+        nodes =
+            Object.keys(
+                customNodes
+            );
+
+
+        nodes.forEach(node => {
+
+            positions[node] =
+                customNodes[node];
+
+        });
+
+    }
+
+
+    distance = {};
+
+    previous = {};
+
+    visited =
+        new Set();
+
+
+    currentNode = null;
+
+
+    nodes.forEach(node => {
+
+        distance[node] =
+            Infinity;
+
+        previous[node] =
+            null;
+
+    });
+
+
+    distance[startNode] =
+        0;
+
+
+    algorithmStarted =
+        true;
+
+    algorithmFinished =
+        false;
+
+
+    document.getElementById(
+        "status"
+    ).innerText =
+        "Algorithm Running";
+
+
+    document.getElementById(
+        "finalRoute"
+    ).innerText =
+        "Calculating...";
+
+
+    document.getElementById(
+        "totalDistance"
+    ).innerText =
+        "--";
+
+
+    drawCurrentMap();
+
+
+    updateTable();
+
+
+    logMessage(
+        `Dijkstra started: ${startNode} → ${endNode}`
+    );
+
+}
+
+
+/* ============================================================
+   NEXT DIJKSTRA STEP
+   ============================================================ */
+
+function nextStep() {
+
+    if (
+        !algorithmStarted
+    ) {
+
+        startAlgorithm();
+
+        return;
+
+    }
+
+
+    if (
+        algorithmFinished
+    ) {
+
+        return;
+
+    }
+
+
+    let smallest =
+        null;
+
+
+    nodes.forEach(node => {
+
+        if (
+            !visited.has(node)
+        ) {
+
+            if (
+                smallest === null ||
+                distance[node] <
+                distance[smallest]
+            ) {
+
+                smallest =
+                    node;
+
+            }
+
+        }
+
+    });
+
+
+    if (
+        smallest === null ||
+        distance[smallest] === Infinity
+    ) {
+
+        finishAlgorithm();
+
+        return;
+
+    }
+
+
+    currentNode =
+        smallest;
+
+
+    visited.add(
+        currentNode
+    );
+
+
+    logMessage(
+        `Selected ${currentNode} with distance ${distance[currentNode]}`
+    );
+
+
+    updateNodeColors();
+
+    updateTable();
+
+
+    /* DESTINATION FOUND */
+
+    if (
+        currentNode === endNode
+    ) {
+
+        finishAlgorithm();
+
+        return;
+
+    }
+
+
+    /* RELAX EDGES */
+
+    for (
+        const neighbor in graph[currentNode]
+    ) {
+
+        if (
+            visited.has(
+                neighbor
+            )
+        ) {
+
+            continue;
+
+        }
+
+
+        const newDistance =
+            distance[currentNode] +
+            graph[currentNode][neighbor];
+
+
+        logMessage(
+            `Checking ${currentNode} → ${neighbor}: ${distance[currentNode]} + ${graph[currentNode][neighbor]} = ${newDistance}`
+        );
+
+
+        if (
+            newDistance <
+            distance[neighbor]
+        ) {
+
+            distance[neighbor] =
+                newDistance;
+
+
+            previous[neighbor] =
+                currentNode;
+
+
+            logMessage(
+                `Updated ${neighbor}: shortest distance = ${newDistance}`
+            );
+
+        }
+
+    }
+
+
+    updateTable();
+
+    highlightCurrentRoads();
+
+}
+
+
+/* ============================================================
+   PLAY ANIMATION
+   ============================================================ */
+
+function playAlgorithm() {
+
+    if (
+        !algorithmStarted
+    ) {
+
+        startAlgorithm();
+
+    }
+
+
+    clearInterval(
+        timer
+    );
+
+
+    timer =
+        setInterval(
+            function() {
+
+                if (
+                    algorithmFinished
+                ) {
+
+                    clearInterval(
+                        timer
+                    );
+
+                    return;
+
+                }
+
+
+                nextStep();
+
+            },
+
+            1200
+        );
+
+}
+
+
+/* ============================================================
+   FINISH ALGORITHM
+   ============================================================ */
+
+function finishAlgorithm() {
+
+    algorithmFinished =
+        true;
+
+
+    clearInterval(
+        timer
+    );
+
+
+    if (
+        distance[endNode] === Infinity
+    ) {
+
+        document.getElementById(
+            "finalRoute"
+        ).innerText =
+            "❌ No route available";
+
+
+        document.getElementById(
+            "totalDistance"
+        ).innerText =
+            "--";
+
+
+        document.getElementById(
+            "status"
+        ).innerText =
+            "No Route";
+
+
+        logMessage(
+            "No path exists between the selected locations."
+        );
+
+
+        return;
+
+    }
+
+
+    const route = [];
+
+
+    let current =
+        endNode;
+
+
+    while (
+        current !== null
+    ) {
+
+        route.unshift(
+            current
+        );
+
+
+        current =
+            previous[current];
+
+    }
+
+
+    document.getElementById(
+        "finalRoute"
+    ).innerText =
+        route.join(
+            " → "
+        );
+
+
+    document.getElementById(
+        "totalDistance"
+    ).innerText =
+        distance[endNode] +
+        " minutes";
+
+
+    document.getElementById(
+        "status"
+    ).innerText =
+        "Route Found";
+
+
+    highlightFinalRoute(
+        route
+    );
+
+
+    logMessage(
+        `✓ Shortest route: ${route.join(" → ")}`
+    );
+
+
+    logMessage(
+        `✓ Minimum travel time: ${distance[endNode]} minutes`
+    );
+
+}
+
+
+/* ============================================================
+   UPDATE DISTANCE TABLE
+   ============================================================ */
+
+function updateTable() {
+
+    const table =
+        document.getElementById(
+            "distanceTable"
+        );
+
+
+    table.innerHTML =
+        "";
+
+
+    nodes.forEach(node => {
+
+        const row =
+            document.createElement(
+                "tr"
+            );
+
+
+        if (
+            node === currentNode
+        ) {
+
+            row.classList.add(
+                "current-row"
+            );
+
+        }
+        else if (
+            visited.has(node)
+        ) {
+
+            row.classList.add(
+                "visited-row"
+            );
+
+        }
+
+
+        let dist =
+            distance[node];
+
+
+        if (
+            dist === undefined ||
+            dist === Infinity
+        ) {
+
+            dist = "∞";
+
+        }
+
+
+        let status =
+            "Unvisited";
+
+
+        if (
+            visited.has(node)
+        ) {
+
+            status =
+                "Visited";
+
+        }
+
+
+        if (
+            node === currentNode
+        ) {
+
+            status =
+                "Current";
+
+        }
+
+
+        if (
+            node === startNode
+        ) {
+
+            status =
+                "Start";
+
+        }
+
+
+        if (
+            node === endNode
+        ) {
+
+            status =
+                "Hospital";
+
+        }
+
+
+        row.innerHTML = `
+
+            <td>
+                <strong>${node}</strong>
+            </td>
+
+            <td>
+                ${dist}
+            </td>
+
+            <td>
+                ${status}
+            </td>
+
+        `;
+
+
+        table.appendChild(
+            row
+        );
+
+    });
+
+}
+
+
+/* ============================================================
+   UPDATE NODE COLORS
+   ============================================================ */
+
+function updateNodeColors() {
+
+    nodes.forEach(node => {
+
+        const element =
+            document.getElementById(
+                "node-" + node
+            );
+
+
+        if (
+            !element
+        ) {
+
+            return;
+
+        }
+
+
+        element.classList.remove(
+            "node-normal",
+            "node-visited",
+            "node-current",
+            "node-start",
+            "node-end"
+        );
+
+
+        if (
+            node === startNode
+        ) {
+
+            element.classList.add(
+                "node-start"
+            );
+
+        }
+        else if (
+            node === endNode
+        ) {
+
+            element.classList.add(
+                "node-end"
+            );
+
+        }
+        else if (
+            node === currentNode
+        ) {
+
+            element.classList.add(
+                "node-current"
+            );
+
+        }
+        else if (
+            visited.has(node)
+        ) {
+
+            element.classList.add(
+                "node-visited"
+            );
+
+        }
+        else {
+
+            element.classList.add(
+                "node-normal"
+            );
+
+        }
+
+    });
+
+}
+
+
+/* ============================================================
+   HIGHLIGHT CURRENT ROADS
+   ============================================================ */
+
+function highlightCurrentRoads() {
+
+    document
+        .querySelectorAll(
+            ".road"
+        )
+        .forEach(
+            road => {
+
+                road.classList.remove(
+                    "active"
+                );
+
+            }
+        );
+
+
+    if (
+        !currentNode
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        !graph[currentNode]
+    ) {
+
+        return;
+
+    }
+
+
+    Object.keys(
+        graph[currentNode]
+    ).forEach(
+        neighbor => {
+
+            const roadId =
+                "road-" +
+                [currentNode, neighbor]
+                .sort()
+                .join("");
+
+
+            const road =
+                document.getElementById(
+                    roadId
+                );
+
+
+            if (
+                road
+            ) {
+
+                road.classList.add(
+                    "active"
+                );
+
+            }
+
+        }
+    );
+
+}
+
+
+/* ============================================================
+   HIGHLIGHT FINAL ROUTE
+   ============================================================ */
+
+function highlightFinalRoute(
+    route
+) {
+
+    document
+        .querySelectorAll(
+            ".road"
+        )
+        .forEach(
+            road => {
+
+                road.classList.remove(
+                    "active"
+                );
+
+                road.classList.remove(
+                    "final"
+                );
+
+            }
+        );
+
+
+    for (
+        let i = 0;
+        i < route.length - 1;
+        i++
+    ) {
+
+        const roadId =
+            "road-" +
+            [
+                route[i],
+                route[i + 1]
+            ]
+            .sort()
+            .join("");
+
+
+        const road =
+            document.getElementById(
+                roadId
+            );
+
+
+        if (
+            road
+        ) {
+
+            road.classList.add(
+                "final"
+            );
+
+        }
+
+    }
+
+}
+
+
+/* ============================================================
+   REDRAW CURRENT MAP
+   ============================================================ */
+
+function drawCurrentMap() {
+
+    if (
+        mapMode === "demo"
+    ) {
+
+        drawDemoMap();
+
+    }
+    else {
+
+        drawCustomMap();
+
+    }
+
+}
+
+
+/* ============================================================
+   RESET ALGORITHM
+   ============================================================ */
+
+function resetAlgorithm() {
+
+    clearInterval(
+        timer
+    );
+
+
+    algorithmStarted =
+        false;
+
+
+    algorithmFinished =
+        false;
+
+
+    currentNode =
+        null;
+
+
+    distance = {};
+
+    previous = {};
+
+    visited =
+        new Set();
+
+
+    document.getElementById(
+        "status"
+    ).innerText =
+        "Ready";
+
+
+    document.getElementById(
+        "finalRoute"
+    ).innerText =
+        "Waiting...";
+
+
+    document.getElementById(
+        "totalDistance"
+    ).innerText =
+        "--";
+
+
+    if (
+        mapMode === "demo"
+    ) {
+
+        startNode =
+            document.getElementById(
+                "startSelect"
+            ).value;
+
+
+        endNode =
+            document.getElementById(
+                "endSelect"
+            ).value;
+
+    }
+
+
+    drawCurrentMap();
+
+    updateTable();
+
+
+    document.getElementById(
+        "log"
+    ).innerHTML =
+        "System ready...";
+
+}
+
+
+/* ============================================================
+   RESET VISUALS
+   ============================================================ */
+
+function resetVisuals() {
+
+    document
+        .querySelectorAll(
+            ".road"
+        )
+        .forEach(
+            road => {
+
+                road.classList.remove(
+                    "active"
+                );
+
+                road.classList.remove(
+                    "final"
+                );
+
+            }
+        );
+
+
+    currentNode =
+        null;
+
+
+    updateNodeColors();
+
+}
+
+
+/* ============================================================
+   LOG MESSAGE
+   ============================================================ */
+
+function logMessage(
+    message
+) {
+
+    const log =
+        document.getElementById(
+            "log"
+        );
+
+
+    const line =
+        document.createElement(
+            "div"
+        );
+
+
+    line.innerText =
+        "> " + message;
+
+
+    log.appendChild(
+        line
+    );
+
+
+    log.scrollTop =
+        log.scrollHeight;
+
+}
+
+
+/* ============================================================
+   INITIAL LOAD
+   ============================================================ */
+
+useDemoMap();
+
+
+/* ============================================================
+   DEMO SELECT CHANGES
+   ============================================================ */
+
+document
+    .getElementById(
+        "startSelect"
+    )
+    .addEventListener(
+        "change",
+        function() {
+
+            startNode =
+                this.value;
+
+            resetAlgorithm();
+
+        }
+    );
+
+
+document
+    .getElementById(
+        "endSelect"
+    )
+    .addEventListener(
+        "change",
+        function() {
+
+            endNode =
+                this.value;
+
+            resetAlgorithm();
+
+        }
+    );
+
+</script>
+
+</body>
+</html>
